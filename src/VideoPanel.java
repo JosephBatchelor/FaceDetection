@@ -42,8 +42,55 @@ public class VideoPanel extends JPanel{
         videoFrame.setVisible(true);
 
         //Live video detection
-        VideoCap();
-        System.exit(0);
+
+        VideoCapture camera = new VideoCapture(0);
+        String xmlFile = "xml/lbpcascade_frontalface_improved.xml";
+        CascadeClassifier cc = new CascadeClassifier(xmlFile);
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    // Read a frame from the camera
+                    Mat frame = new Mat();
+                    camera.read(frame);
+
+                    // If the frame was not read successfully, return
+                    if (frame.empty()) {
+                        return;
+                    }
+
+                    // Process the frame (e.g. detect faces)
+                    MatOfRect faceDetection = new MatOfRect();
+                    cc.detectMultiScale(frame, faceDetection);
+
+                    int i = 1;
+                    for (Rect rect : faceDetection.toArray()) {
+                        Imgproc.rectangle(frame, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 0, 255), 2);
+                        Imgproc.putText(frame, String.format("%d", i), new Point(rect.x + 40, rect.y - 20), Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(51, 204, 51), 5);
+                        i++;
+                    }
+
+                    // Update the UI
+                    BufferedImage image = new BufferedImage(frame.width(), frame.height(), BufferedImage.TYPE_3BYTE_BGR);
+                    image.getGraphics().drawImage(Mat2BufferedImage(frame), 0, 0, null);
+                    videoPanel.updateImage(image);
+                    videoFrame.repaint();
+
+                    // Sleep for a short period of time
+                    try {
+                        Thread.sleep(33);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+
+// Create a Thread object and start the thread
+        Thread thread = new Thread(runnable);
+        thread.start();
+
     }
 
     public VideoPanel() {
@@ -66,6 +113,7 @@ public class VideoPanel extends JPanel{
 
 
     public static void VideoCap(){
+
         VideoCapture camera = new VideoCapture(0);
         String xmlFile = "xml/lbpcascade_frontalface_improved.xml";
         CascadeClassifier cc = new CascadeClassifier(xmlFile);
